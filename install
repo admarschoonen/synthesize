@@ -48,7 +48,8 @@ fi
 
 if [[ ! $UBUNTU_RELEASE =~ 'Ubuntu 14.04' ]]; then
   echo "Sorry, this is only supported for Ubuntu Linux 14.04."
-  exit 1
+  echo "But just maybe it will work on Raspbian Jessie anyway"
+  #exit 1
 fi
 if [[ -d $GRAPHITE_HOME ]]; then
   echo "Looks like you already have a Graphite installation in ${GRAPHITE_HOME}, aborting."
@@ -78,6 +79,7 @@ cd ../statsite; ./autogen.sh; ./configure; make; cp statsite /usr/local/sbin/; c
 pip install txamqp==0.6.2 --upgrade
 
 # Install configuration files for Graphite/Carbon and Apache
+cp ${SYNTHESIZE_HOME}/example.statsite.service /etc/systemd/system/statsite.service
 cp ${SYNTHESIZE_HOME}/templates/statsite/statsite.conf /etc/statsite.conf
 mkdir ${GRAPHITE_CONF}/examples
 mv ${GRAPHITE_CONF}/*.example ${GRAPHITE_CONF}/examples/
@@ -104,8 +106,8 @@ PYTHONPATH=${GRAPHITE_HOME}/webapp django-admin.py migrate --noinput --settings=
 PYTHONPATH=${GRAPHITE_HOME}/webapp django-admin.py loaddata --settings=graphite.settings initial_data.json
 
 # Add carbon system user and set permissions
-groupadd -g 998 carbon
-useradd -c "carbon user" -g 998 -u 998 -s /bin/false carbon
+groupadd -g 996 carbon
+useradd -c "carbon user" -g 996 -u 996 -s /bin/false carbon
 chmod 775 ${GRAPHITE_STORAGE}
 chown www-data:carbon ${GRAPHITE_STORAGE}
 chown www-data:www-data ${GRAPHITE_STORAGE}/graphite.db
@@ -120,10 +122,14 @@ chmod 755 /etc/cron.hourly/graphite-build-index
 sudo -u www-data /opt/graphite/bin/build-index.sh
 
 # Install Grafana
-echo 'deb https://packagecloud.io/grafana/stable/debian/ wheezy main' > /etc/apt/sources.list.d/grafana.list
-curl https://packagecloud.io/gpg.key | apt-key add -
+#echo 'deb https://packagecloud.io/grafana/stable/debian/ wheezy main' > /etc/apt/sources.list.d/grafana.list
+#curl https://packagecloud.io/gpg.key | apt-key add -
+echo 'deb https://packages.grafana.com/oss/deb stable main' > /etc/apt/sources.list.d/grafana.list
+curl https://packages.grafana.com/gpg.key | apt-key add -
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y grafana
+systemctl daemon-reload
+systemctl enable grafana-server
 service grafana-server start
 sleep 5
 curl -X POST -H 'Content-Type: application/json' -u 'admin:admin' \
@@ -132,6 +138,10 @@ curl -X POST -H 'Content-Type: application/json' -u 'admin:admin' \
 curl -X POST -H 'Content-Type: application/json' -u 'admin:admin' \
   -d '{ "inputs": [{"name": "*", "pluginId": "graphite", "type": "datasource", "value": "graphite"}],  "overwrite": true, "path": "dashboards/carbon_metrics.json", "pluginId": "graphite" }' \
   "http://127.0.0.1:3000/api/dashboards/import"
+
+# downgrade whitenoise
+pip uninstall whitenoise -y
+pip install "whitenoise<4"
 
 # Start our processes
 update-rc.d carbon-cache defaults

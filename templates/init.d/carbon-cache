@@ -1,4 +1,13 @@
 #!/bin/sh
+### BEGIN INIT INFO
+# Provides:          energy-monitoring-with-graphite
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Starts the daemons that collect energy data and feed it to Graphite
+# Description:       Starts the daemons that collect energy data and feed it to Graphite. Supported daemons are dsmr, Nest, OpenWeathermap and system
+### END INIT INFO
 
 # Initscript for carbon-cache processes
 # Jason Dixon <jason@dixongroup.net>

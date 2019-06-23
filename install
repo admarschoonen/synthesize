@@ -144,7 +144,8 @@ pip uninstall whitenoise -y
 pip install "whitenoise<4"
 
 # Start our processes
-update-rc.d carbon-cache defaults
+#update-rc.d carbon-cache defaults
+systemctl enable carbon-cache
 service carbon-cache start
 service memcached start
 service collectd start
